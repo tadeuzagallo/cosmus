@@ -8,15 +8,14 @@
       backCtx = backCanvas.getContext('2d');
 
   var Astro  = function() {
-    function Astro(radio, color, parent, translate_radio, velocity, shadow, texture) {
-      this.radio = radio;
+    function Astro(radius, color, parent, translate_radius, velocity, shadow, texture) {
       this.color = color;
       this.parent = parent;
 
       if (parent) {
         this.parent = parent;
         this.rotation = this.step = Math.random() * Math.PI * 2;
-        this.translate_radio = translate_radio;
+        this.translate_radius = translate_radius;
         this.velocity = velocity;
         this.texture = texture === false ? false : true;
       } else {
@@ -25,52 +24,59 @@
         this.texture = false;
       }
 
+      this.radius = this.texture ? Math.round(radius) : radius;
+      this.diameter = this.radius * 2;
       this.shadow = shadow ? true : false;
     }
 
     Astro.prototype.draw = function(offset) {
-      backCtx.clearRect(0, 0, this.radio * 2 + 1, this.radio * 2 + 1);
-      backCtx.save();
-
-      backCtx.translate(this.radio, this.radio);
-      backCtx.rotate(this.rotation);
-      backCtx.translate(-this.radio, -this.radio);
-
-      backCtx.beginPath();
-      backCtx.fillStyle = this.color;
-      backCtx.arc(this.radio, this.radio, this.radio, 0, Math.PI * 2, false);
-      backCtx.fill();
-
       if (Astro.texture && this.texture) {
+        backCtx.clearRect(0, 0, this.diameter, this.diameter);
+        backCtx.save();
+
+        backCtx.translate(this.radius, this.radius);
+        backCtx.rotate(this.rotation);
+        backCtx.translate(-this.radius, -this.radius);
+
+        backCtx.beginPath();
+        backCtx.fillStyle = this.color;
+        backCtx.arc(this.radius, this.radius, this.radius, 0, Math.PI * 2, false);
+        backCtx.fill();
+
         backCtx.fillStyle = Astro.texture;
         backCtx.fill();
-      }
 
-      backCtx.closePath();
+        backCtx.closePath();
 
+        var image = backCtx.getImageData(0, 0, this.diameter, this.diameter);
+        backCtx.restore();
 
-      var image = backCtx.getImageData(0, 0, this.radio * 2, this.radio * 2);
-      backCtx.restore();
-      //ctx.putImageData(image, this.x - this.radio, this.y - this.radio);
+        ctx.putImageData(image, this.x - this.radius, this.y - this.radius);
 
-      if (this.shadow) {
+        if (this.shadow) {
+          ctx.beginPath();
+
+          var grd = ctx.createLinearGradient(
+            this.x - Math.cos(this.step) * this.radius,
+            this.y - Math.sin(this.step) * this.radius,
+            this.x + Math.cos(this.step) * this.radius,
+            this.y + Math.sin(this.step) * this.radius
+          );
+
+          grd.addColorStop(0, 'rgba(0,0,0,.3)');
+          grd.addColorStop(1, 'rgba(0,0,0,1)');
+
+          ctx.arc(this.x, this.y, this.radius * 1.03, 0, Math.PI * 2, false);
+
+          ctx.fillStyle = grd;
+          ctx.fill();
+          ctx.closePath();
+        }
+      } else {
+        offset = offset || {x: 0, y: 0};
         ctx.beginPath();
-
-        var grd = ctx.createLinearGradient(
-          this.x - Math.cos(this.step) * this.radio,
-          this.y - Math.sin(this.step) * this.radio,
-          this.x + Math.cos(this.step) * this.radio,
-          this.y + Math.sin(this.step) * this.radio
-        );
-
-        grd.addColorStop(0, 'rgba(0,0,0,.3)');
-        grd.addColorStop(1, 'rgba(0,0,0,1)');
-        ctx.fillStyle = 'white';
-
-        ctx.arc(this.x, this.y, this.radio, 0, Math.PI * 2, false);
-
-        ctx.fill();
-        ctx.fillStyle = grd;
+        ctx.arc(this.x + offset.x, this.y + offset.y, this.radius, 0, Math.PI * 2, false);
+        ctx.fillStyle = this.color;
         ctx.fill();
         ctx.closePath();
       }
@@ -104,8 +110,8 @@
             astro.rotation += Math.PI / 10 * astro.velocity;
             astro.rotation %= Math.PI * 2;
 
-            astro.x = astro.parent.x + Math.cos(astro.step) * (astro.translate_radio + astro.parent.radio + astro.radio);
-            astro.y = astro.parent.y + Math.sin(astro.step) * (astro.translate_radio + astro.parent.radio + astro.radio);
+            astro.x = Math.round(astro.parent.x + Math.cos(astro.step) * (astro.translate_radius + astro.parent.radius + astro.radius));
+            astro.y = Math.round(astro.parent.y + Math.sin(astro.step) * (astro.translate_radius + astro.parent.radius + astro.radius));
           }
         }
       },
@@ -154,7 +160,6 @@
                               false);
     Galaxy.add(explosion_core);
     Galaxy.add(explosion);
-    console.log(explosion.texture);
   }
 
   for (var k = 0; k < 100; k++) {
